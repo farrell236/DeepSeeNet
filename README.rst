@@ -1,5 +1,5 @@
-.. image:: https://github.com/ncbi-nlp/DeepSeeNet/blob/master/images/deepseenet.png?raw=true
-   :target: https://github.com/ncbi-nlp/DeepSeeNet/blob/master/images/deepseenet.png?raw=true
+.. image:: docs/images/deepseenet.png?raw=true
+   :target: docs/images/deepseenet.png?raw=true
    :alt: DeepSeeNet
 
 .. role:: raw-html(raw)

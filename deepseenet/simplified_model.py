@@ -1,8 +1,13 @@
 import logging
 
 import numpy as np
+import tensorflow as tf
 
-from deepseenet import deepseenet_drusen, deepseenet_pigment, deepseenet_adv_amd
+from deepseenet.utils import preprocess_image
+
+def load_model(model_file):
+    logging.info('Loading the model: %s', model_file)
+    return tf.keras.models.load_model(model_file, compile=False)
 
 
 def get_simplified_score(scores):
@@ -48,40 +53,41 @@ def get_simplified_score(scores):
 
 
 class DeepSeeNetSimplifiedScore(object):
-    def __init__(self, drusen_model='areds', pigment_model='areds', advanced_amd_model='areds'):
+    def __init__(self, drusen_model, pigment_model, advanced_amd_model):
         """
         Args:
             drusen_model: Path or file object.
             pigment_model: Path or file object.
             advanced_amd_model: Path or file object.
         """
-        self.drusen = deepseenet_drusen.DeepSeeNetDrusen(drusen_model)
-        self.pigment = deepseenet_pigment.DeepSeeNetPigment(pigment_model)
-        self.adv = deepseenet_adv_amd.DeepSeeNetAdvancedAMD(advanced_amd_model)
         self.models = {
-            'drusen': (self.drusen, deepseenet_drusen.preprocess_image),
-            'pigment': (self.pigment, deepseenet_pigment.preprocess_image),
-            'advanced_amd': (self.adv, deepseenet_adv_amd.preprocess_image),
+            'drusen': load_model(drusen_model),
+            'pigment': load_model(pigment_model),
+            'advanced_amd': load_model(advanced_amd_model),
         }
 
-    def predict(self, x_left, x_right, verbose=0):
+    def predict(self, x_left, x_right, verbose=False):
         """
         Generates simplified severity score for one left eye and one right eye
 
         Args:
             x_left: input data of the left eye, as a Path or file object.
             x_right: input data of the right eye, as a Path or file object.
-            verbose: Verbosity mode, 0 or 1.
+            verbose: Verbosity mode (bool).
 
         Returns:
             Numpy array of scores of 0-5
         """
         # assert x_left.shape[0] == x_right.shape[0]
         scores = {}
-        for model_name, (model, preprocess_image) in self.models.items():
-            left_score = np.argmax(model.predict(preprocess_image(x_left)), axis=1)[0]
-            right_score = np.argmax(model.predict(preprocess_image(x_right)), axis=1)[0]
+        for model_name, model in self.models.items():
+            left_logits = model.predict(preprocess_image(x_left), verbose=verbose)
+            right_logits = model.predict(preprocess_image(x_right), verbose=verbose)
+            left_score = np.argmax(left_logits, axis=1)[0]
+            right_score = np.argmax(right_logits, axis=1)[0]
             scores[model_name] = (left_score, right_score)
-        if verbose == 1:
+            scores[f'{model_name}_logits'] = (left_logits, right_logits)
+        if verbose:
             logging.info('Risk factors: %s', scores)
-        return get_simplified_score(scores)
+
+        return get_simplified_score(scores), scores
