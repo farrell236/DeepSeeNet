@@ -10,6 +10,7 @@ import tensorflow as tf
 import tensorflow_addons as tfa
 
 from sklearn.model_selection import KFold
+from sklearn.utils import compute_class_weight
 
 import wandb
 from wandb.keras import WandbCallback
@@ -86,6 +87,12 @@ for idx, (train_idx, valid_idx) in enumerate(kf.split(data_df)):
     valid_dataset = valid_dataset.map(parse_function, num_parallel_calls=8)
     valid_dataset = valid_dataset.batch(batch_size)
 
+    class_weights = compute_class_weight(
+        class_weight='balanced',
+        classes=train_df['diagnosis'].unique(),
+        y=train_df['diagnosis'])
+    class_weights = dict(zip(train_df['diagnosis'].unique(), class_weights))
+
     # Create a MirroredStrategy.
     strategy = tf.distribute.MirroredStrategy()
     print('Number of devices: {}'.format(strategy.num_replicas_in_sync))
@@ -117,6 +124,7 @@ for idx, (train_idx, valid_idx) in enumerate(kf.split(data_df)):
         model.fit(
             train_dataset,
             validation_data=valid_dataset,
+            class_weight=class_weights,
             steps_per_epoch=len(train_dataset),
             validation_steps=len(valid_dataset),
             epochs=100,
