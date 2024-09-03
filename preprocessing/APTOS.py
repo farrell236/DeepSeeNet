@@ -42,5 +42,6 @@ for idx, row in tqdm.tqdm(data_df.iterrows(), total=len(data_df)):
     # Display or save image
     # plt.imshow(image); plt.show()
     # plt.imshow(mask); plt.show()
+    image = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
     cv2.imwrite(os.path.join(data_root, 'pp_1024/train_images', row['id_code']+'.png'), image)
     cv2.imwrite(os.path.join(data_root, 'pp_1024/train_mask', row['id_code']+'.png'), mask)
